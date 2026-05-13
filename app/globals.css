@@ -1,26 +1,45 @@
-@import "tailwindcss";
+/* Cape design tokens */
+@import "@deliveryhero/cape-tokens/themes/core/entity.css";
+@import "@deliveryhero/cape-tokens/themes/foodpanda/light.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* Cape component styles */
+@import "@deliveryhero/cape-core/dist/assets/css-normalize.css";
+@import "@deliveryhero/cape-core/dist/assets/css-utilities.css";
+@import "@deliveryhero/cape-core/dist/assets/use-box.css";
+@import "@deliveryhero/cape-core/dist/assets/use-stack.css";
+@import "@deliveryhero/cape-core/dist/assets/use-typography.css";
+@import "@deliveryhero/cape-core/dist/assets/use-heading.css";
+@import "@deliveryhero/cape-core/dist/assets/use-button.css";
+@import "@deliveryhero/cape-core/dist/assets/use-tag.css";
+@import "@deliveryhero/cape-core/dist/assets/use-checkbox.css";
+@import "@deliveryhero/cape-core/dist/assets/use-switch.css";
+@import "@deliveryhero/cape-core/dist/assets/use-avatar.css";
+@import "@deliveryhero/cape-core/dist/assets/use-divider.css";
+@import "@deliveryhero/cape-core/dist/assets/use-indicator.css";
+@import "@deliveryhero/cape-core/dist/assets/use-chip.css";
+@import "@deliveryhero/cape-core/dist/assets/use-spinner.css";
+@import "@deliveryhero/cape-core/dist/assets/use-label.css";
+@import "@deliveryhero/cape-core/dist/assets/use-helper-text.css";
+@import "@deliveryhero/cape-core/dist/assets/use-form-group.css";
+@import "@deliveryhero/cape-core/dist/assets/use-pagination.css";
+@import "@deliveryhero/cape-core/dist/assets/use-pagination-item.css";
+@import "@deliveryhero/cape-core/dist/assets/use-pagination-items.css";
+@import "@deliveryhero/cape-core/dist/assets/tabs.css";
+@import "@deliveryhero/cape-core/dist/assets/table.css";
+@import "@deliveryhero/cape-core/dist/assets/search.css";
+@import "@deliveryhero/cape-core/dist/assets/dropdown.css";
+@import "@deliveryhero/cape-core/dist/assets/form-field.css";
+@import "@deliveryhero/cape-core/dist/assets/text-input.css";
+@import "@deliveryhero/cape-core/dist/assets/use-icon-button.css";
+@import "@deliveryhero/cape-core/dist/assets/use-popover-content.css";
+@import "@deliveryhero/cape-core/dist/assets/use-backdrop.css";
+@import "@deliveryhero/cape-core/dist/assets/visually-hidden.css";
+@import "@deliveryhero/cape-core/dist/assets/use-link.css";
+@import "@deliveryhero/cape-core/dist/assets/scroll-area.css";
+@import "@deliveryhero/cape-core/dist/assets/use-skeleton.css";
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--cp-font-family-primary, 'Open Sans', Arial, sans-serif);
+  background-color: var(--cp-surface-color-secondary, #f4f5f6);
+  color: var(--cp-text-color-primary, #141415);
 }
