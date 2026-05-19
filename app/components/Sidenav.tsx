@@ -208,19 +208,23 @@ export default function Sidenav({ collapsed, onToggle }: SidenavProps) {
                         cursor: 'pointer',
                       }}
                     >
-                      {/* icon body: dot (if active) + icon */}
+                      {/* icon body — dot badge (active only) + centred icon */}
                       <div
                         style={{
+                          position: 'relative',
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '16px',
                           padding: '4px',
                           borderRadius: '8px',
                           flexShrink: 0,
                         }}
                       >
-                        {isActive && <Indicator size="small" status="branded" />}
+                        {isActive && (
+                          <span style={{ position: 'absolute', top: 0, left: 0 }}>
+                            <Indicator size="small" status="branded" />
+                          </span>
+                        )}
                         <div
                           style={{
                             width: '24px',
