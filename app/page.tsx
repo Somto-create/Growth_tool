@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import {
-  Avatar,
   Box,
   Button,
   Checkbox,
@@ -34,8 +33,8 @@ import {
   AiSparklesFilledIcon,
   ChevronDownIcon,
   FilterIcon,
-  LocationOnIcon,
 } from '@deliveryhero/cape-icons';
+import Sidenav from './components/Sidenav';
 
 type StatusType = 'Upcoming' | 'Ending Soon' | 'Running' | 'Ended' | 'Cancelled';
 type CreatorType = 'Co-pilot' | 'Gsheet Import' | 'Internal User';
@@ -337,6 +336,7 @@ const CREATORS: CreatorType[] = ['Co-pilot', 'Gsheet Import', 'Internal User'];
 const CHAIN_TEXT_STYLE = { '--cp-tag-text-color': 'rgba(0,0,0,0.87)' } as React.CSSProperties;
 
 export default function PromotionsPage() {
+  const [sidenavCollapsed, setSidenavCollapsed] = useState(false);
   const [showMyPromotions, setShowMyPromotions] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
@@ -433,47 +433,25 @@ export default function PromotionsPage() {
     <Box
       style={{
         minHeight: '100vh',
-        backgroundColor: 'var(--cp-surface-color-secondary, #f4f5f6)',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
       }}
     >
-      {/* ── App shell nav bar ── */}
+      <Sidenav collapsed={sidenavCollapsed} onToggle={() => setSidenavCollapsed((v) => !v)} />
+
+      {/* ── Main content ── */}
       <Box
         style={{
-          height: '51px',
-          backgroundColor: 'var(--cp-surface-color-default, #fff)',
-          borderBottom: '1px solid var(--cp-border-color-low, #e6e6eb)',
-          padding: '0 24px',
+          marginLeft: sidenavCollapsed ? '80px' : '296px',
+          flex: 1,
+          backgroundColor: 'var(--cp-surface-color-secondary, #f4f5f6)',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexShrink: 0,
+          flexDirection: 'column',
+          minWidth: 0,
+          minHeight: '100dvh',
+          transition: 'margin-left 0.25s ease',
         }}
       >
-        <Typography
-          as="span"
-          variant="subtitleLarge"
-          style={{
-            color: 'var(--cp-action-color-branded-primary-enabled)',
-            fontWeight: 700,
-            fontSize: '18px',
-          }}
-        >
-          foodpanda
-        </Typography>
-        <Stack direction="row" spacing="4px" style={{ alignItems: 'center' }}>
-          <Button variant="tertiary" size="small" endIcon={<ChevronDownIcon />}>
-            All Plugins
-          </Button>
-          <Button variant="tertiary" size="small" startIcon={<LocationOnIcon />}>
-            Singapore
-          </Button>
-          <Avatar initials="S" />
-        </Stack>
-      </Box>
-
-      {/* ── Page content ── */}
       <Box style={{ padding: '14px 26px 32px', flex: 1 }}>
         {/* Page header */}
         <Stack
@@ -874,6 +852,7 @@ export default function PromotionsPage() {
             </Pagination>
           </Box>
         </Box>
+      </Box>
       </Box>
     </Box>
   );

@@ -37,9 +37,10 @@
 @import "@deliveryhero/cape-core/dist/assets/use-link.css";
 @import "@deliveryhero/cape-core/dist/assets/scroll-area.css";
 @import "@deliveryhero/cape-core/dist/assets/use-skeleton.css";
+@import "@deliveryhero/cape-core/dist/assets/use-tooltip-content.css";
 
 body {
-  font-family: var(--cp-font-family-primary, 'Open Sans', Arial, sans-serif);
+  font-family: var(--font-figtree, Figtree), system-ui, sans-serif;
   background-color: var(--cp-surface-color-secondary, #f4f5f6);
   color: var(--cp-text-color-primary, #141415);
 }
