@@ -20,9 +20,6 @@ import {
   TargetIcon,
 } from '@deliveryhero/cape-icons';
 
-const LOGO_URL = 'https://www.figma.com/api/mcp/asset/d0a28bf0-cbfe-48a4-a2e3-2a5b144e4815';
-const EMBLEM_SHAPE_URL = 'https://www.figma.com/api/mcp/asset/61c8ec96-4888-4d95-9be9-5654139464b8';
-const EMBLEM_PANDA_URL = 'https://www.figma.com/api/mcp/asset/ff803c8e-9b9f-48e4-ae67-0ff9c8a70837';
 
 const EXPANDED_WIDTH = '296px';
 const COLLAPSED_WIDTH = '80px';
@@ -55,6 +52,31 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
     ],
   },
 ];
+
+function AppIcon() {
+  return (
+    <div
+      style={{
+        width: '24px',
+        height: '24px',
+        borderRadius: '150px',
+        backgroundColor: '#d61f26',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}
+    >
+      <div style={{ position: 'relative', width: '18px', height: '18px', flexShrink: 0 }}>
+        <img src="/dh-logo.svg" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', maxWidth: 'none' }} />
+        <div style={{ position: 'absolute', top: '19.79%', right: '15.63%', bottom: '26.04%', left: '11.46%' }}>
+          <img src="/dh-commet.svg" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', maxWidth: 'none' }} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function GridAppsIcon() {
   return (
@@ -105,28 +127,30 @@ export default function Sidenav({ collapsed, onToggle }: SidenavProps) {
         }}
       >
         {collapsed ? (
-          /* Panda emblem — 32×40 outer, 24×24 inner logo */
+          /* Collapsed emblem */
           <div style={{ width: '32px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            {/* Product logo placeholder: 24×24, overflow hidden */}
-            <div style={{ width: '24px', height: '24px', maxWidth: '24px', overflow: 'hidden', display: 'flex', alignItems: 'center', position: 'relative', flexShrink: 0 }}>
-              {/* Logo: fills placeholder, positions children */}
-              <div style={{ flex: '1 0 0', minWidth: '1px', aspectRatio: '1/1', position: 'relative' }}>
-                {/* Shape: square, fills full width, vertically centered */}
-                <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', transform: 'translateY(-50%)', aspectRatio: '1/1' }}>
-                  <img src={EMBLEM_SHAPE_URL} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', maxWidth: 'none' }} />
-                </div>
-                {/* Panda: 72:73 ratio, top 12.5%, bottom 11.46%, horizontally centered */}
-                <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: '12.5%', bottom: '11.46%', aspectRatio: '72/73' }}>
-                  <img src={EMBLEM_PANDA_URL} alt="foodpanda" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', maxWidth: 'none' }} />
-                </div>
-              </div>
-            </div>
+            <AppIcon />
           </div>
         ) : (
           /* Full wordmark + portal chip */
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', width: '100%', paddingLeft: '4px' }}>
             <div style={{ flex: 1, height: '40px', display: 'flex', alignItems: 'center' }}>
-              <img src={LOGO_URL} alt="foodpanda" style={{ height: '24px', width: '122px', display: 'block' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexShrink: 0, overflow: 'hidden' }}>
+                <AppIcon />
+                <span
+                  style={{
+                    fontSize: '21px',
+                    fontWeight: 600,
+                    lineHeight: '24px',
+                    color: 'var(--cp-text-color-primary, #141415)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  foodpanda
+                </span>
+              </div>
             </div>
             <Chip size="medium" startIcon={<GridAppsIcon />} endIcon={<ChevronDownMiniIcon />} />
           </div>

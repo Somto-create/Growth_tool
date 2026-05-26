@@ -4,18 +4,15 @@ import { useState, useMemo } from 'react';
 import {
   Box,
   Button,
-  Checkbox,
-  Divider,
   Dropdown,
   DropdownBody,
   DropdownTrigger,
   Pagination,
   PaginationButton,
   PaginationItems,
-  PaginationItemsPerPage,
   SearchInput,
+  Select,
   Stack,
-  Switch,
   Table,
   TableBody,
   TableCell,
@@ -30,9 +27,9 @@ import {
   Typography,
 } from '@deliveryhero/cape-core';
 import {
-  AiSparklesFilledIcon,
+  BellIcon,
   ChevronDownIcon,
-  FilterIcon,
+  ChevronDownMiniIcon,
 } from '@deliveryhero/cape-icons';
 import Sidenav from './components/Sidenav';
 
@@ -327,47 +324,110 @@ const TAB_STATUS_MAP: Record<string, StatusType | null> = {
   upcoming: 'Upcoming',
   ended: 'Ended',
   cancelled: 'Cancelled',
-  processing: '__processing__' as StatusType,
+  failed: '__failed__' as StatusType,
+  draft: '__draft__' as StatusType,
 };
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
-const CREATORS: CreatorType[] = ['Co-pilot', 'Gsheet Import', 'Internal User'];
+
+const AVATAR_URL = 'https://www.figma.com/api/mcp/asset/70644811-13d9-4801-b6dd-018d54cd5296';
 
 const CHAIN_TEXT_STYLE = { '--cp-tag-text-color': 'rgba(0,0,0,0.87)' } as React.CSSProperties;
 
+const PROMO_TYPES = [
+  'Strikethrough',
+  'Multi-Buy (Mix & Match)',
+  'Multi-Buy (Same Item)',
+  'Buy One Get One',
+  'Percentage Discount',
+  'Fixed Price',
+  'Bundle Deal',
+];
+const CHAINS = [
+  'Talabat Dmarts East Kuwait',
+  'Carrefour',
+  'LuLu',
+  'Talabat Dmarts West Kuwait',
+  'Choithrams',
+  'Spinneys',
+  'Waitrose',
+];
+const STORES = [
+  'UAE',
+  'Kuwait',
+  'Qatar',
+  'Saudi Arabia',
+  'Bahrain',
+  'Oman',
+  'Jordan',
+  'Egypt',
+];
+
+const chipStyle = (active: boolean): React.CSSProperties => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '4px',
+  padding: '0 12px',
+  height: '32px',
+  border: `1px solid ${active ? 'var(--cp-action-color-branded-primary-enabled, #3a22d5)' : 'var(--cp-border-color-high, #ceced4)'}`,
+  borderRadius: '100px',
+  backgroundColor: active ? 'rgba(58,34,213,0.08)' : 'transparent',
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+  fontSize: '14px',
+  fontWeight: 500,
+  color: active
+    ? 'var(--cp-action-color-branded-primary-enabled, #3a22d5)'
+    : 'var(--cp-text-color-primary, #141415)',
+  outline: 'none',
+  whiteSpace: 'nowrap',
+});
+
+const tabBadgeStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: '18px',
+  height: '18px',
+  borderRadius: '100px',
+  backgroundColor: 'var(--cp-action-color-branded-primary-enabled, #3a22d5)',
+  color: '#fff',
+  fontSize: '11px',
+  fontWeight: 700,
+  padding: '0 5px',
+  marginLeft: '4px',
+  lineHeight: 1,
+};
+
 export default function PromotionsPage() {
   const [sidenavCollapsed, setSidenavCollapsed] = useState(false);
-  const [showMyPromotions, setShowMyPromotions] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [activeTab, setActiveTab] = useState('all');
-  const [createdByFilter, setCreatedByFilter] = useState<CreatorType | null>(null);
+  const [promoTypeFilter, setPromoTypeFilter] = useState<string | null>(null);
+  const [chainFilter, setChainFilter] = useState<string | null>(null);
+  const [storeFilter, setStoreFilter] = useState<string | null>(null);
 
   const filteredPromotions = useMemo(() => {
-    let result = ALL_PROMOTIONS;
+    if (activeTab === 'failed' || activeTab === 'draft') return [];
 
-    // Tab filter (by status)
+    let result = ALL_PROMOTIONS;
     const tabStatus = TAB_STATUS_MAP[activeTab];
-    if (activeTab === 'processing') {
-      return []; // no processing items in dataset
-    }
     if (tabStatus !== null) {
       result = result.filter((p) => p.status === tabStatus);
     }
 
-    // "Show only my promotions" — treat "Internal User" as current user
-    if (showMyPromotions) {
-      result = result.filter((p) => p.createdBy === 'Internal User');
+    if (promoTypeFilter) {
+      result = result.filter((p) => p.type === promoTypeFilter);
     }
 
-    // Created by dropdown filter
-    if (createdByFilter) {
-      result = result.filter((p) => p.createdBy === createdByFilter);
+    if (chainFilter) {
+      result = result.filter((p) =>
+        p.chains.some((c) => c.toLowerCase().includes(chainFilter.toLowerCase()))
+      );
     }
 
-    // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -379,7 +439,7 @@ export default function PromotionsPage() {
     }
 
     return result;
-  }, [activeTab, showMyPromotions, createdByFilter, searchQuery]);
+  }, [activeTab, promoTypeFilter, chainFilter, searchQuery]);
 
   const totalPages = Math.ceil(filteredPromotions.length / itemsPerPage);
   const pagedPromotions = filteredPromotions.slice(
@@ -387,56 +447,16 @@ export default function PromotionsPage() {
     currentPage * itemsPerPage
   );
 
-  const allSelected =
-    pagedPromotions.length > 0 &&
-    pagedPromotions.every((p) => selectedRows.has(p.id));
-  const someSelected =
-    pagedPromotions.some((p) => selectedRows.has(p.id)) && !allSelected;
-
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     setCurrentPage(1);
-    setSelectedRows(new Set());
   };
 
-  const handleCreatedByFilter = (creator: CreatorType | null) => {
-    setCreatedByFilter(creator);
-    setCurrentPage(1);
-    setSelectedRows(new Set());
-  };
-
-  const toggleSelectAll = () => {
-    if (allSelected || someSelected) {
-      const next = new Set(selectedRows);
-      pagedPromotions.forEach((p) => next.delete(p.id));
-      setSelectedRows(next);
-    } else {
-      const next = new Set(selectedRows);
-      pagedPromotions.forEach((p) => next.add(p.id));
-      setSelectedRows(next);
-    }
-  };
-
-  const toggleRow = (id: string) => {
-    setSelectedRows((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
-  const createdByLabel = createdByFilter
-    ? `Created by: ${createdByFilter}`
-    : 'Created by (All)';
+  const countByStatus = (status: StatusType) =>
+    ALL_PROMOTIONS.filter((p) => p.status === status).length;
 
   return (
-    <Box
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'row',
-      }}
-    >
+    <Box style={{ minHeight: '100vh', display: 'flex', flexDirection: 'row' }}>
       <Sidenav collapsed={sidenavCollapsed} onToggle={() => setSidenavCollapsed((v) => !v)} />
 
       {/* ── Main content ── */}
@@ -444,134 +464,160 @@ export default function PromotionsPage() {
         style={{
           marginLeft: sidenavCollapsed ? '80px' : '296px',
           flex: 1,
-          backgroundColor: 'var(--cp-surface-color-secondary, #f4f5f6)',
+          backgroundColor: 'var(--cp-base-color-flat, #fff)',
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0,
           minHeight: '100dvh',
           transition: 'margin-left 0.25s ease',
+          padding: '0 20px',
         }}
       >
-      <Box style={{ padding: '14px 26px 32px', flex: 1 }}>
-        {/* Page header */}
-        <Stack
-          direction="row"
-          style={{ alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}
-        >
-          <Stack direction="row" spacing="12px" style={{ alignItems: 'center' }}>
-            <Typography
-              as="span"
-              variant="subtitleLarge"
+        {/* ── Page header ── */}
+        <Box style={{ paddingBlock: '16px' }}>
+          <Stack
+            direction="row"
+            style={{ alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <h1
               style={{
-                color: 'var(--cp-text-color-primary)',
+                margin: 0,
+                fontSize: '36px',
                 fontWeight: 700,
-                fontSize: '20px',
-                lineHeight: '27px',
-                letterSpacing: '0.15px',
-              }}
-            >
-              Promo Tool
-            </Typography>
-            <Typography
-              as="span"
-              variant="subtitleLarge"
-              style={{
-                color: 'var(--cp-action-color-branded-primary-enabled)',
-                fontWeight: 700,
-                fontSize: '16px',
-                letterSpacing: '0.15px',
+                lineHeight: 1.33,
+                color: 'var(--cp-text-color-primary, #141415)',
+                fontFamily: 'var(--font-figtree, Figtree), system-ui, sans-serif',
               }}
             >
               Promotions
-            </Typography>
+            </h1>
+
+            <Stack direction="row" spacing="20px" style={{ alignItems: 'center' }}>
+              {/* Singapore pill */}
+              <button
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '0 12px',
+                  height: '40px',
+                  border: '1px solid var(--cp-border-color-high, #ceced4)',
+                  borderRadius: '200px',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                }}
+              >
+                <span
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: '#22c55e',
+                    flexShrink: 0,
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    color: 'var(--cp-text-color-primary, #141415)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Singapore
+                </span>
+                <ChevronDownIcon size="small" />
+              </button>
+
+              {/* Notification button */}
+              <button
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '40px',
+                  height: '40px',
+                  border: '1px solid var(--cp-border-color-high, #ceced4)',
+                  borderRadius: '200px',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  flexShrink: 0,
+                  color: 'var(--cp-text-color-primary, #141415)',
+                }}
+              >
+                <BellIcon size="medium" />
+              </button>
+
+              {/* Avatar */}
+              <Box
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                  border: '1px solid var(--cp-border-color-high, #ceced4)',
+                  backgroundColor: 'var(--cp-border-color-high, #ceced4)',
+                }}
+              >
+                <img
+                  src={AVATAR_URL}
+                  alt="User avatar"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+              </Box>
+            </Stack>
           </Stack>
+        </Box>
 
-          <Stack direction="row" spacing="8px" style={{ alignItems: 'center' }}>
-            <Dropdown>
-              <DropdownTrigger>
-                <Button variant="secondary" size="small" status="branded" endIcon={<ChevronDownIcon />}>
-                  Create New Promotion
-                </Button>
-              </DropdownTrigger>
-              <DropdownBody>
-                <Box style={{ minWidth: '213px', padding: '8px 0' }}>
-                  <Button variant="tertiary" size="medium" style={{ width: '100%', justifyContent: 'flex-start' }}>
-                    Upload Spreadsheet
-                  </Button>
-                  <Divider />
-                  <Button variant="tertiary" size="medium" style={{ width: '100%', justifyContent: 'flex-start' }}>
-                    Create Manually
-                  </Button>
-                </Box>
-              </DropdownBody>
-            </Dropdown>
-
-            <Button variant="primary" size="small" status="branded" startIcon={<AiSparklesFilledIcon />}>
-              Generate Promotion with Co-pilot
-            </Button>
-          </Stack>
-        </Stack>
-
-        {/* ── Main content card ── */}
+        {/* ── Body ── */}
         <Box
           style={{
-            backgroundColor: 'var(--cp-surface-color-default, #fff)',
-            borderRadius: '32px',
-            overflow: 'hidden',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            paddingBottom: '24px',
           }}
         >
-          {/* Tabs row + toggle */}
+          {/* Controls: tabs + actions in one row */}
           <Stack
             direction="row"
+            spacing="32px"
             style={{
               alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingInline: '24px',
-              paddingTop: '12px',
+              backgroundColor: 'var(--cp-base-color-flat, #fff)',
               borderBottom: '1px solid var(--cp-border-color-low, #e6e6eb)',
             }}
           >
-            <Tabs active={activeTab} onChange={handleTabChange} size="medium" divider={false}>
-              <TabList>
-                <TabItem value="all">All</TabItem>
-                <TabItem value="running">
-                  Running ({ALL_PROMOTIONS.filter((p) => p.status === 'Running').length})
-                </TabItem>
-                <TabItem value="upcoming">
-                  Upcoming ({ALL_PROMOTIONS.filter((p) => p.status === 'Upcoming').length})
-                </TabItem>
-                <TabItem value="ended">
-                  Ended ({ALL_PROMOTIONS.filter((p) => p.status === 'Ended').length})
-                </TabItem>
-                <TabItem value="cancelled">
-                  Cancelled ({ALL_PROMOTIONS.filter((p) => p.status === 'Cancelled').length})
-                </TabItem>
-                <TabItem value="processing">Processing/Failed (0)</TabItem>
-              </TabList>
-            </Tabs>
+            {/* Tabs */}
+            <Box style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+              <Tabs active={activeTab} onChange={handleTabChange} size="medium" divider={false}>
+                <TabList>
+                  <TabItem value="all">All</TabItem>
+                  <TabItem value="running">
+                    Running
+                    {countByStatus('Running') > 0 && (
+                      <span style={tabBadgeStyle}>{countByStatus('Running')}</span>
+                    )}
+                  </TabItem>
+                  <TabItem value="upcoming">Upcoming</TabItem>
+                  <TabItem value="ended">Ended</TabItem>
+                  <TabItem value="cancelled">Cancelled</TabItem>
+                  <TabItem value="failed">Failed</TabItem>
+                  <TabItem value="draft">Draft</TabItem>
+                </TabList>
+              </Tabs>
+            </Box>
 
-            <Stack direction="row" spacing="8px" style={{ alignItems: 'center', flexShrink: 0 }}>
-              <Typography as="span" variant="bodySmall" style={{ whiteSpace: 'nowrap' }}>
-                Show only my promotions
-              </Typography>
-              <Switch
-                label="Show only my promotions"
-                hideLabel
-                checked={showMyPromotions}
-                onChange={(e) => {
-                  setShowMyPromotions(e.target.checked);
-                  setCurrentPage(1);
-                }}
-              />
-            </Stack>
-          </Stack>
-
-          {/* Search + filter controls */}
-          <Stack direction="row" spacing="12px" style={{ alignItems: 'center', padding: '16px 24px' }}>
-            <Box style={{ flex: 1 }}>
+            {/* Actions */}
+            <Stack direction="row" spacing="12px" style={{ alignItems: 'center', flexShrink: 0 }}>
               <SearchInput
-                placeholder="Search Promotion"
-                size="medium"
+                placeholder="Search here"
+                size="small"
                 value={searchQuery}
                 onChange={(val) => {
                   setSearchQuery(val);
@@ -582,277 +628,292 @@ export default function PromotionsPage() {
                   setCurrentPage(1);
                 }}
               />
-            </Box>
-
-            <Dropdown>
-              <DropdownTrigger>
-                <Button
-                  variant="secondary"
-                  size="small"
-                  status={createdByFilter ? 'branded' : undefined}
-                  endIcon={<ChevronDownIcon />}
-                >
-                  {createdByLabel}
-                </Button>
-              </DropdownTrigger>
-              <DropdownBody>
-                <Box style={{ padding: '8px 0', minWidth: '180px' }}>
-                  <Button
-                    variant="tertiary"
-                    size="medium"
-                    style={{ width: '100%', justifyContent: 'flex-start', fontWeight: !createdByFilter ? 700 : undefined }}
-                    onClick={() => handleCreatedByFilter(null)}
-                  >
-                    All
-                  </Button>
-                  <Divider />
-                  {CREATORS.map((c) => (
-                    <Button
-                      key={c}
-                      variant="tertiary"
-                      size="medium"
-                      style={{
-                        width: '100%',
-                        justifyContent: 'flex-start',
-                        fontWeight: createdByFilter === c ? 700 : undefined,
-                      }}
-                      onClick={() => handleCreatedByFilter(c)}
-                    >
-                      {c}
-                    </Button>
-                  ))}
-                </Box>
-              </DropdownBody>
-            </Dropdown>
-
-            <Dropdown>
-              <DropdownTrigger>
-                <Button variant="secondary" size="small" startIcon={<FilterIcon />} endIcon={<ChevronDownIcon />}>
-                  Filters
-                </Button>
-              </DropdownTrigger>
-              <DropdownBody>
-                <Box style={{ padding: '8px 0', minWidth: '180px' }}>
-                  <Typography
-                    as="p"
-                    variant="labelSmall"
-                    style={{ padding: '4px 16px 8px', color: 'var(--cp-text-color-tertiary)', margin: 0 }}
-                  >
-                    Filter by type
-                  </Typography>
-                  {['Strikethrough', 'Multi-Buy (Mix & Match)', 'Multi-Buy (Same Item)'].map((t) => (
-                    <Button
-                      key={t}
-                      variant="tertiary"
-                      size="medium"
-                      style={{ width: '100%', justifyContent: 'flex-start' }}
-                    >
-                      {t}
-                    </Button>
-                  ))}
-                </Box>
-              </DropdownBody>
-            </Dropdown>
+              <Button variant="primary" size="small" status="branded">
+                Create Promotion
+              </Button>
+            </Stack>
           </Stack>
 
-          {/* Select All + result count */}
-          <Stack
-            direction="row"
-            style={{ alignItems: 'center', justifyContent: 'space-between', paddingInline: '24px', paddingBottom: '8px' }}
+          {/* ── Filter chips ── */}
+          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+            {[
+              { label: 'Promo type', value: promoTypeFilter, setValue: setPromoTypeFilter, options: PROMO_TYPES },
+              { label: 'Chains', value: chainFilter, setValue: setChainFilter, options: CHAINS },
+              { label: 'Stores', value: storeFilter, setValue: setStoreFilter, options: STORES },
+            ].map(({ label, value, setValue, options }) => (
+              <span key={label} style={{ display: 'inline-flex' }}>
+                <Dropdown>
+                  <DropdownTrigger>
+                    <button style={chipStyle(!!value)}>
+                      {value ? `${label}: ${value}` : label}
+                      <ChevronDownMiniIcon size="small" />
+                    </button>
+                  </DropdownTrigger>
+                  <DropdownBody>
+                    <Box style={{ padding: '8px 0', minWidth: '200px', maxHeight: '220px', overflowY: 'auto' }}>
+                      <Button
+                        variant="tertiary"
+                        size="medium"
+                        style={{ width: '100%', justifyContent: 'flex-start', fontWeight: !value ? 700 : undefined }}
+                        onClick={() => setValue(null)}
+                      >
+                        All
+                      </Button>
+                      {options.map((opt) => (
+                        <Button
+                          key={opt}
+                          variant="tertiary"
+                          size="medium"
+                          style={{
+                            width: '100%',
+                            justifyContent: 'flex-start',
+                            fontWeight: value === opt ? 700 : undefined,
+                          }}
+                          onClick={() => setValue(opt)}
+                        >
+                          {opt}
+                        </Button>
+                      ))}
+                    </Box>
+                  </DropdownBody>
+                </Dropdown>
+              </span>
+            ))}
+          </div>
+
+          {/* ── Table card ── */}
+          <Box
+            style={{
+              flex: 1,
+              backgroundColor: 'var(--cp-base-color-flat, #fff)',
+              border: '1px solid var(--cp-border-color-high, #dbdbdb)',
+              borderRadius: '20px',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
           >
-            <Checkbox
-              label="Select All"
-              checked={allSelected}
-              indeterminate={someSelected}
-              onChange={toggleSelectAll}
-              size="small"
-            />
-            <Typography as="span" variant="labelSmall" style={{ color: 'var(--cp-text-color-tertiary)' }}>
-              {filteredPromotions.length} result{filteredPromotions.length !== 1 ? 's' : ''}
-            </Typography>
-          </Stack>
-
-          {/* ── Promotions table ── */}
-          <TableContainer>
-            <Table
-              size="small"
-              dividers="row"
-              style={{
-                '--cp-table-cell-vertical-align': 'middle',
-                '--cp-table-cell-padding-block': '8px',
-              } as React.CSSProperties}
-            >
-              <TableHeader>
-                <TableRow>
-                  <TableHead style={{ width: '52px', paddingInline: '16px 8px' }} />
-                  <TableHead>Promotion Name</TableHead>
-                  <TableHead style={{ width: '116px' }}>Status</TableHead>
-                  <TableHead style={{ width: '120px' }}>Created by</TableHead>
-                  <TableHead style={{ width: '280px' }}>Chain</TableHead>
-                  <TableHead style={{ width: '120px' }}>
-                    <Stack direction="row" spacing="4px" style={{ alignItems: 'center' }}>
-                      <span>Start Date</span>
-                      <Typography as="span" variant="labelSmall">↓</Typography>
-                    </Stack>
-                  </TableHead>
-                  <TableHead style={{ width: '110px' }}>End Date</TableHead>
-                  <TableHead style={{ width: '200px' }}>Detail</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pagedPromotions.length === 0 ? (
+            <TableContainer>
+              <Table
+                size="small"
+                dividers="row"
+                style={{
+                  '--cp-table-cell-vertical-align': 'middle',
+                  '--cp-table-cell-padding-block': '8px',
+                } as React.CSSProperties}
+              >
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={8}>
-                      <Box style={{ padding: '32px 0', textAlign: 'center' }}>
-                        <Typography as="p" variant="bodySmall" style={{ color: 'var(--cp-text-color-tertiary)', margin: 0 }}>
-                          No promotions match your filters.
-                        </Typography>
-                      </Box>
-                    </TableCell>
+                    <TableHead>Promotion Name</TableHead>
+                    <TableHead style={{ width: '116px' }}>Status</TableHead>
+                    <TableHead style={{ width: '120px' }}>Created by</TableHead>
+                    <TableHead style={{ width: '280px' }}>Chain</TableHead>
+                    <TableHead style={{ width: '120px' }}>
+                      <Stack direction="row" spacing="4px" style={{ alignItems: 'center' }}>
+                        <span>Start Date</span>
+                        <Typography as="span" variant="labelSmall">↓</Typography>
+                      </Stack>
+                    </TableHead>
+                    <TableHead style={{ width: '110px' }}>End Date</TableHead>
+                    <TableHead style={{ width: '200px' }}>Detail</TableHead>
                   </TableRow>
-                ) : (
-                  pagedPromotions.map((promo) => (
-                    <TableRow key={promo.id}>
-                      <TableCell style={{ paddingInline: '16px 8px' }}>
-                        <Checkbox
-                          label={promo.name}
-                          hideLabel
-                          checked={selectedRows.has(promo.id)}
-                          onChange={() => toggleRow(promo.id)}
-                          size="small"
-                        />
-                      </TableCell>
-
-                      <TableCell>
-                        <Stack direction="column" spacing="2px">
-                          <Typography
-                            as="p"
-                            variant="labelSmall"
-                            style={{ color: 'var(--cp-text-color-primary)', opacity: 0.5, margin: 0, lineHeight: '14px' }}
-                          >
-                            {promo.type}
-                          </Typography>
+                </TableHeader>
+                <TableBody>
+                  {pagedPromotions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7}>
+                        <Box style={{ padding: '32px 0', textAlign: 'center' }}>
                           <Typography
                             as="p"
                             variant="bodySmall"
-                            style={{ fontWeight: 600, margin: 0, lineHeight: '20px' }}
+                            style={{ color: 'var(--cp-text-color-tertiary)', margin: 0 }}
                           >
-                            {promo.name}
+                            No promotions match your filters.
                           </Typography>
-                        </Stack>
-                      </TableCell>
-
-                      <TableCell>
-                        {promo.status ? (
-                          <Tag size="small" status={STATUS_TAG[promo.status]}>
-                            {promo.status}
-                          </Tag>
-                        ) : null}
-                      </TableCell>
-
-                      <TableCell>
-                        <Typography as="span" variant="bodySmall">
-                          {promo.createdBy}
-                        </Typography>
-                      </TableCell>
-
-                      <TableCell>
-                        <Stack direction="row" spacing="6px" style={{ alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                          {promo.chains.map((chain, i) => (
-                            <Tag key={i} size="small" status="warning" style={CHAIN_TEXT_STYLE}>
-                              {chain}
-                            </Tag>
-                          ))}
-                          {promo.moreChains > 0 && (
-                            <Typography
-                              as="span"
-                              variant="labelSmall"
-                              style={{ color: 'var(--cp-text-color-tertiary)', opacity: 0.5 }}
-                            >
-                              +{promo.moreChains} more
-                            </Typography>
-                          )}
-                        </Stack>
-                      </TableCell>
-
-                      <TableCell>
-                        <Stack direction="column" spacing="2px">
-                          <Typography as="p" variant="bodySmall" style={{ margin: 0, lineHeight: '20px' }}>
-                            {promo.startDate}
-                          </Typography>
-                          <Typography
-                            as="p"
-                            variant="labelSmall"
-                            style={{ color: 'var(--cp-text-color-secondary)', margin: 0, lineHeight: '14px' }}
-                          >
-                            {promo.startTime}
-                          </Typography>
-                        </Stack>
-                      </TableCell>
-
-                      <TableCell>
-                        <Stack direction="column" spacing="2px">
-                          <Typography as="p" variant="bodySmall" style={{ margin: 0, lineHeight: '20px' }}>
-                            {promo.endDate}
-                          </Typography>
-                          <Typography
-                            as="p"
-                            variant="labelSmall"
-                            style={{ color: 'var(--cp-text-color-secondary)', margin: 0, lineHeight: '14px' }}
-                          >
-                            {promo.endTime}
-                          </Typography>
-                        </Stack>
-                      </TableCell>
-
-                      <TableCell>
-                        <Stack direction="column" spacing="4px">
-                          {promo.lastEdited && (
-                            <Typography
-                              as="p"
-                              variant="labelSmall"
-                              style={{ color: 'var(--cp-text-color-primary)', margin: 0, lineHeight: '14px' }}
-                            >
-                              Last edited: {promo.lastEdited}
-                            </Typography>
-                          )}
-                          {promo.createdOn && (
-                            <Typography
-                              as="p"
-                              variant="labelSmall"
-                              style={{ color: 'var(--cp-text-color-tertiary)', margin: 0, lineHeight: '14px' }}
-                            >
-                              Created on: {promo.createdOn}
-                            </Typography>
-                          )}
-                        </Stack>
+                        </Box>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                  ) : (
+                    pagedPromotions.map((promo) => (
+                      <TableRow key={promo.id}>
+                        <TableCell>
+                          <Stack direction="column" spacing="2px">
+                            <Typography
+                              as="p"
+                              variant="labelSmall"
+                              style={{
+                                color: 'var(--cp-text-color-primary)',
+                                opacity: 0.5,
+                                margin: 0,
+                                lineHeight: '14px',
+                              }}
+                            >
+                              {promo.type}
+                            </Typography>
+                            <Typography
+                              as="p"
+                              variant="bodySmall"
+                              style={{ fontWeight: 600, margin: 0, lineHeight: '20px' }}
+                            >
+                              {promo.name}
+                            </Typography>
+                          </Stack>
+                        </TableCell>
 
-          {/* ── Pagination ── */}
-          <Box style={{ padding: '12px 24px', borderTop: '1px solid var(--cp-border-color-low, #e6e6eb)' }}>
-            <Pagination count={Math.max(totalPages, 1)} current={currentPage} onChange={setCurrentPage}>
-              <PaginationItemsPerPage
-                options={ITEMS_PER_PAGE_OPTIONS}
-                label="Per Page"
-                itemsPerPage={itemsPerPage}
-                onItemsPerPageChange={(val) => {
-                  setItemsPerPage(val);
-                  setCurrentPage(1);
-                }}
-              />
-              <PaginationButton action="prev" />
-              <PaginationItems />
-              <PaginationButton action="next" />
-            </Pagination>
+                        <TableCell>
+                          {promo.status ? (
+                            <Tag size="small" status={STATUS_TAG[promo.status]}>
+                              {promo.status}
+                            </Tag>
+                          ) : null}
+                        </TableCell>
+
+                        <TableCell>
+                          <Typography as="span" variant="bodySmall">
+                            {promo.createdBy}
+                          </Typography>
+                        </TableCell>
+
+                        <TableCell>
+                          <Stack
+                            direction="row"
+                            spacing="6px"
+                            style={{ alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}
+                          >
+                            {promo.chains.map((chain, i) => (
+                              <Tag key={i} size="small" status="warning" style={CHAIN_TEXT_STYLE}>
+                                {chain}
+                              </Tag>
+                            ))}
+                            {promo.moreChains > 0 && (
+                              <Typography
+                                as="span"
+                                variant="labelSmall"
+                                style={{ color: 'var(--cp-text-color-tertiary)', opacity: 0.5 }}
+                              >
+                                +{promo.moreChains} more
+                              </Typography>
+                            )}
+                          </Stack>
+                        </TableCell>
+
+                        <TableCell>
+                          <Stack direction="column" spacing="2px">
+                            <Typography
+                              as="p"
+                              variant="bodySmall"
+                              style={{ margin: 0, lineHeight: '20px' }}
+                            >
+                              {promo.startDate}
+                            </Typography>
+                            <Typography
+                              as="p"
+                              variant="labelSmall"
+                              style={{
+                                color: 'var(--cp-text-color-secondary)',
+                                margin: 0,
+                                lineHeight: '14px',
+                              }}
+                            >
+                              {promo.startTime}
+                            </Typography>
+                          </Stack>
+                        </TableCell>
+
+                        <TableCell>
+                          <Stack direction="column" spacing="2px">
+                            <Typography
+                              as="p"
+                              variant="bodySmall"
+                              style={{ margin: 0, lineHeight: '20px' }}
+                            >
+                              {promo.endDate}
+                            </Typography>
+                            <Typography
+                              as="p"
+                              variant="labelSmall"
+                              style={{
+                                color: 'var(--cp-text-color-secondary)',
+                                margin: 0,
+                                lineHeight: '14px',
+                              }}
+                            >
+                              {promo.endTime}
+                            </Typography>
+                          </Stack>
+                        </TableCell>
+
+                        <TableCell>
+                          <Stack direction="column" spacing="4px">
+                            {promo.lastEdited && (
+                              <Typography
+                                as="p"
+                                variant="labelSmall"
+                                style={{
+                                  color: 'var(--cp-text-color-primary)',
+                                  margin: 0,
+                                  lineHeight: '14px',
+                                }}
+                              >
+                                Last edited: {promo.lastEdited}
+                              </Typography>
+                            )}
+                            {promo.createdOn && (
+                              <Typography
+                                as="p"
+                                variant="labelSmall"
+                                style={{
+                                  color: 'var(--cp-text-color-tertiary)',
+                                  margin: 0,
+                                  lineHeight: '14px',
+                                }}
+                              >
+                                Created on: {promo.createdOn}
+                              </Typography>
+                            )}
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            {/* ── Pagination ── */}
+            <Box
+              style={{
+                padding: '12px 24px',
+                borderTop: '1px solid var(--cp-border-color-low, #e6e6eb)',
+              }}
+            >
+              <Pagination
+                count={Math.max(totalPages, 1)}
+                current={currentPage}
+                onChange={setCurrentPage}
+              >
+                <Select
+                  className="cape-pagination-items-per-page"
+                  size="xsmall"
+                  style={{ minWidth: 'max-content' }}
+                  value={String(itemsPerPage)}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value="" disabled>Per Page</option>
+                  {ITEMS_PER_PAGE_OPTIONS.map((opt) => (
+                    <option key={opt} value={String(opt)}>{opt}</option>
+                  ))}
+                </Select>
+                <PaginationButton action="prev" />
+                <PaginationItems />
+                <PaginationButton action="next" />
+              </Pagination>
+            </Box>
           </Box>
         </Box>
-      </Box>
       </Box>
     </Box>
   );
